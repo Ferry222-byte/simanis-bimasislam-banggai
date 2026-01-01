@@ -1,0 +1,29 @@
+{
+  "name": "SIMANIS Banggai - Sistem Manajemen Bimas Islam",
+  "short_name": "SIMANIS",
+  "description": "Aplikasi SIMANIS Banggai untuk manajemen layanan KUA, penyuluh agama, dan monitoring program Bimas Islam secara online.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f766e",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "https://ferry222-byte.github.io/simanis-bimasislam-banggai/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://ferry222-byte.github.io/simanis-bimasislam-banggai/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
