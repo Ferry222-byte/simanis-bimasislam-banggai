@@ -1,6 +1,7 @@
 {
   "name": "SIMANIS Banggai - Sistem Manajemen Bimas Islam",
   "short_name": "SIMANIS",
+  "id": "https://ferry222-byte.github.io/simanis-bimasislam-banggai/",
   "description": "Aplikasi SIMANIS Banggai untuk manajemen layanan KUA, penyuluh agama, dan monitoring program Bimas Islam secara online.",
   "start_url": "./",
   "scope": "./",
@@ -10,20 +11,35 @@
   "theme_color": "#0f766e",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/ferry222-byte/simanis-bimasislam-banggai/main/icons/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://raw.githubusercontent.com/ferry222-byte/simanis-bimasislam-banggai/main/icons/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1080&h=1920&q=80",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Tampilan Beranda Publik"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1522202180011-ef1fdbef73d8?auto=format&fit=crop&w=1080&h=1920&q=80",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Tampilan Dashboard"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "id-ID",
+  "dir": "ltr"
 }
