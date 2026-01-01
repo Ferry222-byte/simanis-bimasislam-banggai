@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<!--
+  VERSI PORTAL GEMILANG
+  - Aplikasi: "GEMILANG - Bimas Islam Banggai" (tanpa Supabase)
+  - Fungsi: Portal layanan & informasi publik KUA/Konsultasi
+  - Versi inilah yang saat ini Anda upload ke GitHub sebagai index.html
+-->
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEMILANG - Bimas Islam Banggai</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React 18 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel untuk JSX inline -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Supabase JS (opsional, untuk sinkron data KUA dari server) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      background-color: #f9fafb;
+    }
+    body::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- IKON INLINE ---
+    const IconBase = ({ children, className, ...props }) => (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+        {...props}
+      >
+        {children}
+      </svg>
+    );
+
+    const Icons = {
+      Building2: (props) => (
+        <IconBase {...props}>
+          <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+          <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+          <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+          <path d="M10 6h4" />
+          <path d="M10 10h4" />
+          <path d="M10 14h4" />
+          <path d="M10 18h4" />
+        </IconBase>
+      ),
+      Users: (props) => (
+        <IconBase {...props}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </IconBase>
+      ),
+      HeartHandshake: (props) => (
+        <IconBase {...props}>
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+          <path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08v0c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.15-.26c2.15 1.35 2 3.87 2 3.87l-7-7Z" />
+        </IconBase>
+      ),
+      MapPin: (props) => (
+        <IconBase {...props}>
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </IconBase>
+      ),
+      Calendar: (props) => (
+        <IconBase {...props}>
+          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+          <line x1="16" x2="16" y1="2" y2="6" />
+          <line x1="8" x2="8" y1="2" y2="6" />
+          <line x1="3" x2="21" y1="10" y2="10" />
+        </IconBase>
+      ),
+      MessageCircle: (props) => (
+        <IconBase {...props}>
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </IconBase>
+      ),
+      Search: (props) => (
+        <IconBase {...props}>
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </IconBase>
+      ),
+      Menu: (props) => (
+        <IconBase {...props}>
+          <line x1="4" x2="20" y1="12" y2="12" />
+          <line x1="4" x2="20" y1="6" y2="6" />
+          <line x1="4" x2="20" y1="18" y2="18" />
+        </IconBase>
+      ),
+      X: (props) => (
+        <IconBase {...props}>
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </IconBase>
+      ),
+      Home: (props) => (
+        <IconBase {...props}>
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </IconBase>
+      ),
+      BookOpen: (props) => (
+        <IconBase {...props}>
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </IconBase>
+      ),
+      Moon: (props) => (
+        <IconBase {...props}>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </IconBase>
+      ),
+      ChevronRight: (props) => (
+        <IconBase {...props}>
+          <path d="m9 18 6-6-6-6" />
+        </IconBase>
+      ),
+      Phone: (props) => (
+        <IconBase {...props}>
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </IconBase>
+      ),
+      FileText: (props) => (
+        <IconBase {...props}>
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" x2="8" y1="13" y2="13" />
+          <line x1="16" x2="8" y1="17" y2="17" />
+          <line x1="10" x2="8" y1="9" y2="9" />
+        </IconBase>
+      ),
+      Sparkles: (props) => (
+        <IconBase {...props}>
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+        </IconBase>
+      ),
+      SearchIcon: (props) => (
+        <IconBase {...props}>
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </IconBase>
+      ),
+    };
+
+    const {
+      Building2,
+      Users,
+      HeartHandshake,
+      MapPin,
+      Calendar,
+      MessageCircle,
+      SearchIcon,
+      Menu,
+      X,
+      Moon,
+      ChevronRight,
+      Phone,
+      FileText,
+      Sparkles,
+    } = Icons;
+
+    // --- KONFIGURASI SEDERHANA ---
+    // Ganti dengan nomor WhatsApp admin (tanpa + dan tanpa spasi), contoh: '62812xxxxxxx'
+    const KONTAK_KONSULTASI_WHATSAPP = '';
+
+    // Konfigurasi Supabase untuk sinkron data KUA publik (opsional)
+    // Isi dengan SUPABASE_URL & ANON_KEY dari project yang sama dengan SIMANIS
+    const SUPABASE_URL_GEMILANG = '';
+    const SUPABASE_ANON_KEY_GEMILANG = '';
+
+    let gemilangSupabase = null;
+    function getSupabaseClientGemilang() {
+      if (!SUPABASE_URL_GEMILANG || !SUPABASE_ANON_KEY_GEMILANG) return null;
+      if (!window.supabase) return null;
+      if (!gemilangSupabase) {
+        const { createClient } = window.supabase;
+        gemilangSupabase = createClient(SUPABASE_URL_GEMILANG, SUPABASE_ANON_KEY_GEMILANG);
+      }
+      return gemilangSupabase;
+    }
+
+    // --- DATA ---
+    const STATISTIK_DATA = [
+      {
+        label: 'Peristiwa Nikah Tahun Ini',
+        value: '1.450+',
+        icon: HeartHandshake,
+        color: 'text-pink-600',
+        bg: 'bg-pink-100',
+      },
+      {
+        label: 'Masjid & Musholla',
+        value: 523,
+        icon: Moon,
+        color: 'text-emerald-600',
+        bg: 'bg-emerald-100',
+      },
+      {
+        label: 'Penyuluh Agama',
+        value: 89,
+        icon: Users,
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
+      },
+      {
+        label: 'KUA Kecamatan',
+        value: 24,
+        icon: Building2,
+        color: 'text-amber-600',
+        bg: 'bg-amber-100',
+      },
+    ];
+
+    const DAFTAR_KUA = [
+      {
+        id: 1,
+        nama: 'KUA Kec. Luwuk',
+        alamat: 'Kec. Luwuk',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 2,
+        nama: 'KUA Kec. Luwuk Selatan',
+        alamat: 'Kec. Luwuk Selatan',
+        kepala: 'H. Sapri Mariadjang, S.HI',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 3,
+        nama: 'KUA Kec. Luwuk Utara',
+        alamat: 'Kec. Luwuk Utara',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 4,
+        nama: 'KUA Kec. Luwuk Timur',
+        alamat: 'Kec. Luwuk Timur',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 5,
+        nama: 'KUA Kec. Bunta',
+        alamat: 'Kec. Bunta',
+        kepala: 'Saifudin, S.HI',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 6,
+        nama: 'KUA Kec. Nambo',
+        alamat: 'Kec. Nambo',
+        kepala: 'Syarifudin Dailaa, S.Fil.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 7,
+        nama: 'KUA Kec. Kintom',
+        alamat: 'Kec. Kintom',
+        kepala: 'Usman Jayadi, S.FIL.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 8,
+        nama: 'KUA Kec. Batui',
+        alamat: 'Kec. Batui',
+        kepala: 'Andi Muammar Andi Rasyid, S.HI',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 9,
+        nama: 'KUA Kec. Batui Selatan',
+        alamat: 'Kec. Batui Selatan',
+        kepala: 'N.A Sustiono, S.HI',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 10,
+        nama: 'KUA Kec. Moilong',
+        alamat: 'Kec. Moilong',
+        kepala: 'H. Mohamad Zulkarnain, S.Ag, MA',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 11,
+        nama: 'KUA Kec. Toili',
+        alamat: 'Kec. Toili',
+        kepala: 'H. Muhammad Saleh, S.Ag',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 12,
+        nama: 'KUA Kec. Toili Jaya',
+        alamat: 'Kec. Toili Jaya',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 13,
+        nama: 'KUA Kec. Toili Barat',
+        alamat: 'Kec. Toili Barat',
+        kepala: 'Mashuri Unok, S.Ag',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 14,
+        nama: 'KUA Kec. Pagimana',
+        alamat: 'Kec. Pagimana',
+        kepala: 'Suriyanto S.FIL.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 15,
+        nama: 'KUA Kec. Simpang Raya',
+        alamat: 'Kec. Simpang Raya',
+        kepala: 'Ahmad Zaenal Ihrom, S.Th.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 16,
+        nama: 'KUA Kec. Lobu',
+        alamat: 'Kec. Lobu',
+        kepala: 'Bakhtiar Lakita, S.Ag',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 17,
+        nama: 'KUA Kec. Nuhon',
+        alamat: 'Kec. Nuhon',
+        kepala: 'ISMAIL M. AMIR A. S.FIL.I',
+        kontak: '-',
+        status: 'Siaga',
+        layanan: 'Hybrid',
+      },
+      {
+        id: 18,
+        nama: 'KUA Kec. Masama',
+        alamat: 'Kec. Masama',
+        kepala: 'Ismail, S.HI',
+        kontak: '-',
+        status: 'Siaga',
+        layanan: 'Hybrid',
+      },
+      {
+        id: 19,
+        nama: 'KUA Kec. Lamala',
+        alamat: 'Kec. Lamala',
+        kepala: 'Awaludin Maserang, S.Pd.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 20,
+        nama: 'KUA Kec. Mantoh',
+        alamat: 'Kec. Mantoh',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 21,
+        nama: 'KUA Kec. Balantak',
+        alamat: 'Kec. Balantak',
+        kepala: 'Muhlis Isini, S.Ag',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 22,
+        nama: 'KUA Kec. Balantak Selatan',
+        alamat: 'Kec. Balantak Selatan',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+      {
+        id: 23,
+        nama: 'KUA Kec. Balantak Utara',
+        alamat: 'Kec. Balantak Utara',
+        kepala: 'Ahmad Saleh, S.Pd.I',
+        kontak: '-',
+        status: 'Prima',
+        layanan: 'Online',
+      },
+      {
+        id: 24,
+        nama: 'KUA Kec. Bualemo',
+        alamat: 'Kec. Bualemo',
+        kepala: 'Belum diisi',
+        kontak: '-',
+        status: 'Belum diatur',
+        layanan: '-',
+      },
+    ];
+
+    const BERITA_TERBARU = [
+      {
+        id: 1,
+        judul: 'Jadwal Manasik Haji Tingkat Kabupaten Banggai Tahun 2025',
+        tanggal: '24 Des 2024',
+        kategori: 'Haji & Umrah',
+      },
+      {
+        id: 2,
+        judul: 'Sosialisasi Sertifikasi Halal bagi UMKM di Kecamatan Kintom',
+        tanggal: '22 Des 2024',
+        kategori: 'JPH',
+      },
+      {
+        id: 3,
+        judul: 'Pembinaan Penyuluh Agama Islam Non-PNS Zona 1',
+        tanggal: '20 Des 2024',
+        kategori: 'Kepenyuluhan',
+      },
+    ];
+
+    const LAYANAN_LIST = [
+      {
+        id: 'nikah',
+        title: 'Info Nikah & Rujuk',
+        desc: 'Syarat, Prosedur, dan Jadwal KUA',
+        icon: HeartHandshake,
+      },
+      {
+        id: 'masjid',
+        title: 'Data Masjid (SIMAS)',
+        desc: 'Direktori Masjid & Musholla',
+        icon: Moon,
+      },
+      {
+        id: 'konsultasi',
+        title: 'Konsultasi Syariah',
+        desc: 'Tanya Jawab dengan Penyuluh',
+        icon: MessageCircle,
+      },
+      {
+        id: 'wakaf',
+        title: 'Zakat & Wakaf',
+        desc: 'Lokasi Tanah Wakaf & Bayar Zakat',
+        icon: MapPin,
+      },
+      {
+        id: 'jadwal',
+        title: 'Jadwal Sholat',
+        desc: 'Waktu Sholat Kab. Banggai',
+        icon: Calendar,
+      },
+      {
+        id: 'dokumen',
+        title: 'Unduh Dokumen',
+        desc: 'Formulir dan Regulasi',
+        icon: FileText,
+      },
+    ];
+
+    // --- COMPONENTS ---
+
+    const Header = ({
+      setPage,
+      mobileMenuOpen,
+      setMobileMenuOpen,
+      role,
+      onChangeRole,
+      onRequestAdminLogin,
+      onAdminLogout,
+    }) => {
+      const roleLabel =
+        role === 'admin' ? 'Admin' : role === 'kua' ? 'KUA' : 'Pengguna Umum';
+
+      return (
+      <header className="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div
+            className="flex items-center space-x-3 cursor-pointer"
+            onClick={() => setPage('home')}
+          >
+            <div className="bg-white p-1.5 rounded-full">
+              <Sparkles className="w-6 h-6 text-emerald-700" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold leading-none tracking-wide">GEMILANG</h1>
+              <p className="text-[10px] md:text-xs text-emerald-100 tracking-wider">
+                Gerbang Layanan & Informasi Agama Banggai
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <nav className="hidden md:flex space-x-6 text-sm font-medium">
+              <button
+                onClick={() => setPage('home')}
+                className="hover:text-emerald-200 transition"
+              >
+                Beranda
+              </button>
+              <button
+                onClick={() => setPage('layanan')}
+                className="hover:text-emerald-200 transition"
+              >
+                Layanan Publik
+              </button>
+              <button
+                onClick={() => setPage('data')}
+                className="hover:text-emerald-200 transition"
+              >
+                Data KUA
+              </button>
+              <button
+                onClick={() => setPage('konsultasi')}
+                className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg transition border border-emerald-500 shadow-sm"
+              >
+                Konsultasi Online
+              </button>
+            </nav>
+
+            <div className="hidden md:flex flex-col items-end text-[10px] leading-tight">
+              <span className="text-emerald-100">Mode Akses: {roleLabel}</span>
+              <div className="flex gap-1 mt-1">
+                <button
+                  type="button"
+                  onClick={() => onChangeRole('umum')}
+                  className="px-2 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-500 border border-emerald-400"
+                >
+                  Umum
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeRole('kua')}
+                  className="px-2 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-500 border border-emerald-400"
+                >
+                  KUA
+                </button>
+                {role === 'admin' ? (
+                  <button
+                    type="button"
+                    onClick={onAdminLogout}
+                    className="px-2 py-0.5 rounded-full bg-red-600 hover:bg-red-500 border border-red-400"
+                  >
+                    Keluar Admin
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onRequestAdminLogin}
+                    className="px-2 py-0.5 rounded-full bg-yellow-500 hover:bg-yellow-400 border border-yellow-300 text-emerald-900"
+                  >
+                    Masuk Admin
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
+        </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-emerald-800 p-4 space-y-3 shadow-inner">
+            <button
+              onClick={() => {
+                setPage('home');
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 border-b border-emerald-700"
+            >
+              Beranda
+            </button>
+            <button
+              onClick={() => {
+                setPage('layanan');
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 border-b border-emerald-700"
+            >
+              Layanan Publik
+            </button>
+            <button
+              onClick={() => {
+                setPage('data');
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 border-b border-emerald-700"
+            >
+              Data KUA
+            </button>
+            <button
+              onClick={() => {
+                setPage('konsultasi');
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 font-bold text-emerald-200"
+            >
+              Konsultasi Online
+            </button>
+            <div className="pt-3 mt-2 border-t border-emerald-700 text-[11px] text-emerald-100">
+              <p className="mb-2">Mode Akses: {roleLabel}</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChangeRole('umum');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 border border-emerald-400"
+                >
+                  Umum
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChangeRole('kua');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 border border-emerald-400"
+                >
+                  KUA
+                </button>
+                {role === 'admin' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAdminLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-3 py-1 rounded-full bg-red-600 hover:bg-red-500 border border-red-400"
+                  >
+                    Keluar Admin
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRequestAdminLogin();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-3 py-1 rounded-full bg-yellow-500 hover:bg-yellow-400 border border-yellow-300 text-emerald-900"
+                  >
+                    Masuk Admin
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+      );
+    };
+
+    const HeroSection = ({ setPage }) => (
+      <div className="bg-gradient-to-r from-emerald-700 to-teal-600 text-white py-12 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10">
+          <Moon size={300} />
+        </div>
+        <div className="container mx-auto relative z-10 text-center md:text-left">
+          <div className="md:flex items-center justify-between">
+            <div className="md:w-2/3">
+              <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-semibold mb-4 border border-white/30 backdrop-blur-sm">
+                🌟 Aplikasi Resmi Kemenag Kab. Banggai
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
+                Selamat Datang di <br />
+                <span className="text-emerald-200">GEMILANG</span>
+              </h2>
+              <p className="text-lg mb-8 text-emerald-50 max-w-xl">
+                <b>Gerbang Layanan & Informasi Agama Banggai.</b> <br />
+                Melayani umat dengan sepenuh hati di Tanah Babasal. Akses
+                mudah ke KUA, Penyuluhan, dan Informasi Keagamaan dalam satu
+                genggaman.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                <button
+                  onClick={() => setPage('layanan')}
+                  className="bg-white text-emerald-800 font-bold px-8 py-3 rounded-full shadow-lg hover:bg-emerald-50 transition hover:scale-105 transform duration-200"
+                >
+                  Akses Layanan
+                </button>
+                <button
+                  onClick={() => setPage('data')}
+                  className="bg-emerald-800/50 backdrop-blur-md border border-emerald-400 text-white font-medium px-8 py-3 rounded-full hover:bg-emerald-800 transition"
+                >
+                  Cari KUA Terdekat
+                </button>
+              </div>
+            </div>
+            <div className="hidden md:block md:w-1/3 mt-8 md:mt-0">
+              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 shadow-xl">
+                <h3 className="font-bold text-xl mb-4 flex items-center border-b border-white/20 pb-2">
+                  <Calendar className="mr-2 w-5 h-5" /> Jadwal Sholat Luwuk
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center bg-white/5 p-2 rounded">
+                    <span>Subuh</span>
+                    <span className="font-mono font-bold">04:22</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white/5 p-2 rounded">
+                    <span>Dzuhur</span>
+                    <span className="font-mono font-bold">11:54</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white/5 p-2 rounded">
+                    <span>Ashar</span>
+                    <span className="font-mono font-bold">15:18</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-emerald-500/30 border border-emerald-400/50 p-2 rounded">
+                    <span>Maghrib</span>
+                    <span className="font-mono font-bold">17:58</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white/5 p-2 rounded">
+                    <span>Isya</span>
+                    <span className="font-mono font-bold">19:10</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    const StatsDashboard = () => (
+      <div className="container mx-auto px-4 -mt-8 relative z-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {STATISTIK_DATA.map((stat, idx) => (
+            <div
+              key={idx}
+              className="bg-white rounded-xl shadow-lg p-4 flex flex-col items-center text-center border-b-4 border-emerald-500 transform hover:-translate-y-1 transition duration-300"
+            >
+              <div className={`p-3 rounded-full mb-3 ${stat.bg} ${stat.color}`}>
+                <stat.icon className="w-6 h-6" />
+              </div>
+              <span className="text-3xl font-bold text-gray-800">{stat.value}</span>
+              <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                {stat.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    const FeaturesGrid = ({ setPage, runningText }) => {
+      const handleClick = (id) => {
+        switch (id) {
+          case 'nikah':
+            window.open('https://simkah.kemenag.go.id/info-nikah', '_blank');
+            break;
+          case 'masjid':
+            window.open('https://simas.kemenag.go.id/page/profilmasjid', '_blank');
+            break;
+          case 'konsultasi':
+            setPage('konsultasi');
+            break;
+          case 'wakaf':
+            window.open('https://siwak.kemenag.go.id', '_blank');
+            break;
+          case 'jadwal':
+            window.open('https://bimasislam.kemenag.go.id/jadwalshalat', '_blank');
+            break;
+          case 'dokumen':
+            window.open('https://bimasislam.kemenag.go.id/post', '_blank');
+            break;
+          default:
+            setPage('layanan');
+        }
+      };
+
+      return (
+        <section className="py-12 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                Layanan Digital
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Fitur unggulan aplikasi GEMILANG untuk masyarakat
+              </p>
+              <div className="rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1 overflow-hidden">
+                <marquee className="text-xs md:text-sm text-emerald-800 font-semibold tracking-wide">
+                  {runningText ||
+                    'Selamat datang di GEMILANG - Gerbang Layanan & Informasi Agama Banggai. | Informasi resmi layanan Bimas Islam, KUA, dan penyuluhan tersedia di aplikasi ini. | Untuk pembaruan data KUA dan layanan, silakan hubungi admin Seksi Bimas Islam Kemenag Kab. Banggai.'}
+                </marquee>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {LAYANAN_LIST.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleClick(item.id)}
+                  className="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition cursor-pointer border border-gray-100 flex items-start space-x-4 group"
+                >
+                  <div className="bg-emerald-50 p-3 rounded-lg group-hover:bg-emerald-100 transition">
+                    <item.icon className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 group-hover:text-emerald-700 transition">
+                      {item.title}
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-1">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    };
+
+    const NewsFeed = () => (
+      <section className="py-12 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-end mb-6">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">
+                Info Bimas Terkini
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Kabar terbaru dari Kemenag Banggai
+              </p>
+            </div>
+            <button className="text-emerald-600 font-medium text-sm flex items-center hover:underline">
+              Lihat Semua <ChevronRight size={16} />
+            </button>
+          </div>
+          <div className="grid gap-4">
+            {BERITA_TERBARU.map((news) => (
+              <div
+                key={news.id}
+                className="flex items-center bg-gray-50 p-4 rounded-lg hover:bg-emerald-50 transition group cursor-pointer border border-gray-100 hover:border-emerald-200"
+              >
+                <div className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-3 py-1 rounded-full mr-4 min-w-[100px] text-center uppercase tracking-wide">
+                  {news.kategori}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-800 group-hover:text-emerald-700 line-clamp-1">
+                    {news.judul}
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1 flex items-center">
+                    <Calendar className="w-3 h-3 mr-1" /> {news.tanggal}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+
+    const StatusPill = ({ label, variant }) => {
+      const base =
+        'px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center';
+      const styles =
+        variant === 'prima'
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          : variant === 'siaga'
+          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+          : 'bg-slate-50 text-slate-600 border border-slate-200';
+      return <span className={`${base} ${styles}`}>{label}</span>;
+    };
+
+    const LayananPill = ({ label }) => {
+      const lower = (label || '').toLowerCase();
+      const base =
+        'px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center';
+      const styles =
+        lower === 'online'
+          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+          : lower === 'hybrid'
+          ? 'bg-purple-50 text-purple-700 border border-purple-200'
+          : 'bg-slate-50 text-slate-600 border border-slate-200';
+      return <span className={`${base} ${styles}`}>{label}</span>;
+    };
+
+    const DataKuaPage = ({ role, runningText, onUpdateRunningText }) => {
+      const isAdmin = role === 'admin';
+      const [query, setQuery] = useState('');
+
+      const [kuaList, setKuaList] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem('gemilang_kua');
+          if (saved) return JSON.parse(saved);
+        } catch (e) {}
+        return DAFTAR_KUA;
+      });
+
+      const [remoteKua, setRemoteKua] = useState(null);
+      const [loadingRemote, setLoadingRemote] = useState(false);
+      const [remoteError, setRemoteError] = useState('');
+      const [editingId, setEditingId] = useState(null);
+
+      const saveKuaList = (next) => {
+        setKuaList(next);
+        try {
+          window.localStorage.setItem('gemilang_kua', JSON.stringify(next));
+        } catch (e) {}
+      };
+
+      useEffect(() => {
+        const client = getSupabaseClientGemilang();
+        if (!client) return;
+
+        setLoadingRemote(true);
+        setRemoteError('');
+        client
+          .from('kua_public')
+          .select('*')
+          .order('nama', { ascending: true })
+          .then(({ data, error }) => {
+            if (error) {
+              setRemoteError(error.message || String(error));
+              setRemoteKua(null);
+            } else {
+              setRemoteKua(data || []);
+            }
+          })
+          .finally(() => {
+            setLoadingRemote(false);
+          });
+      }, []);
+
+      const effectiveKua = remoteKua && remoteKua.length > 0 ? remoteKua : kuaList;
+      const fromServer = !!(remoteKua && remoteKua.length > 0);
+
+      const handleAddKua = () => {
+        if (!isAdmin || fromServer) return;
+        const nextId = (kuaList.reduce((m, k) => Math.max(m, k.id || 0), 0) || 0) + 1;
+        const baru = {
+          id: nextId,
+          nama: 'KUA Kec. ...',
+          alamat: 'Kec. ...',
+          kepala: '',
+          kontak: '-',
+          status: 'Prima',
+          layanan: 'Online',
+        };
+        const next = [...kuaList, baru];
+        saveKuaList(next);
+        setEditingId(nextId);
+      };
+
+      const handleFieldChange = (id, field, value) => {
+        const next = kuaList.map((k) => (k.id === id ? { ...k, [field]: value } : k));
+        saveKuaList(next);
+      };
+
+      const filtered = effectiveKua.filter((kua) => {
+        const q = query.trim().toLowerCase();
+        if (!q) return true;
+        return (
+          kua.nama.toLowerCase().includes(q) ||
+          kua.alamat.toLowerCase().includes(q) ||
+          kua.kepala.toLowerCase().includes(q)
+        );
+      });
+
+      return (
+        <div className="container mx-auto px-4 py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <Building2 className="mr-2 text-emerald-600" /> Data KUA Kecamatan
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto md:items-center">
+              <div className="relative w-full sm:w-72 md:w-80">
+                <SearchIcon className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Cari nama atau kecamatan..."
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                />
+              </div>
+              {isAdmin && !fromServer && (
+                <button
+                  type="button"
+                  onClick={handleAddKua}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow hover:bg-emerald-700 transition"
+                >
+                  + Tambah KUA
+                </button>
+              )}
+            </div>
+          </div>
+
+          {fromServer && (
+            <div className="mb-4 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+              Data KUA ini ditampilkan dari server (Supabase). Pembaruan data dilakukan melalui aplikasi SIMANIS, bukan langsung di portal GEMILANG.
+            </div>
+          )}
+
+          {loadingRemote && (
+            <div className="mb-4 text-xs text-sky-700 bg-sky-50 border border-sky-100 px-3 py-2 rounded-lg">
+              Mengambil data KUA dari server...
+            </div>
+          )}
+
+          {remoteError && (
+            <div className="mb-4 text-xs text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+              Gagal memuat data KUA dari server: {remoteError}. Portal menggunakan data lokal bawaan.
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {filtered.map((kua) => {
+                const isEditing = editingId === kua.id;
+                return (
+                  <div
+                    key={kua.id}
+                    className="border border-gray-200 rounded-lg p-5 hover:border-emerald-400 transition hover:shadow-md flex flex-col justify-between"
+                  >
+                    <div>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={kua.nama}
+                          onChange={(e) => handleFieldChange(kua.id, 'nama', e.target.value)}
+                          className="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-800 mb-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      ) : (
+                        <h3 className="font-bold text-lg text-emerald-800 mb-2">
+                          {kua.nama}
+                        </h3>
+                      )}
+                      <div className="space-y-2 text-sm text-gray-600 mb-3">
+                        <p className="flex items-start">
+                          <MapPin className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={kua.alamat}
+                              onChange={(e) => handleFieldChange(kua.id, 'alamat', e.target.value)}
+                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            />
+                          ) : (
+                            <span>{kua.alamat}</span>
+                          )}
+                        </p>
+                        <p className="flex items-center">
+                          <Users className="w-4 h-4 mr-2" />
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={kua.kepala}
+                              onChange={(e) => handleFieldChange(kua.id, 'kepala', e.target.value)}
+                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            />
+                          ) : (
+                            <span>Kepala: {kua.kepala}</span>
+                          )}
+                        </p>
+                        <p className="flex items-center">
+                          <Phone className="w-4 h-4 mr-2" />
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={kua.kontak}
+                              onChange={(e) => handleFieldChange(kua.id, 'kontak', e.target.value)}
+                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            />
+                          ) : (
+                            <span>{kua.kontak}</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-3 items-center">
+                        {isEditing ? (
+                          <select
+                            value={kua.status || ''}
+                            onChange={(e) => handleFieldChange(kua.id, 'status', e.target.value)}
+                            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                          >
+                            <option value="Prima">Prima</option>
+                            <option value="Siaga">Siaga</option>
+                            <option value="Lainnya">Lainnya</option>
+                          </select>
+                        ) : (
+                          <StatusPill
+                            label={kua.status || 'Status tidak diketahui'}
+                            variant={
+                              (kua.status || '').toLowerCase() === 'prima'
+                                ? 'prima'
+                                : (kua.status || '').toLowerCase() === 'siaga'
+                                ? 'siaga'
+                                : 'lain'
+                            }
+                          />
+                        )}
+                        {isEditing ? (
+                          <select
+                            value={kua.layanan || ''}
+                            onChange={(e) => handleFieldChange(kua.id, 'layanan', e.target.value)}
+                            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                          >
+                            <option value="Online">Online</option>
+                            <option value="Tatap Muka">Tatap Muka</option>
+                            <option value="Hybrid">Hybrid</option>
+                          </select>
+                        ) : (
+                          <LayananPill label={kua.layanan || '-'} />
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2 w-full">
+                      {isAdmin && !fromServer && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isEditing) {
+                              setEditingId(null);
+                            } else {
+                              setEditingId(kua.id);
+                            }
+                          }}
+                          className="flex-1 bg-emerald-50 text-emerald-700 py-2 rounded font-medium hover:bg-emerald-100 text-sm transition border border-emerald-200"
+                        >
+                          {isEditing ? 'Selesai' : 'Edit Data'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(kua.nama + ' ' + (kua.alamat || 'Kabupaten Banggai'))}`;
+                          window.open(url, '_blank');
+                        }}
+                        className={
+                          isAdmin
+                            ? 'flex-1 bg-emerald-600 text-white py-2 rounded font-medium hover:bg-emerald-700 text-sm transition'
+                            : 'w-full bg-emerald-600 text-white py-2 rounded font-medium hover:bg-emerald-700 text-sm transition'
+                        }
+                      >
+                        Detail & Peta
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filtered.length === 0 && (
+                <div className="col-span-full text-center py-8 text-sm text-gray-500">
+                  Tidak ada KUA yang cocok dengan kata kunci "{query}".
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isAdmin && onUpdateRunningText && (
+            <div className="mt-6 bg-white rounded-xl shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Pengaturan Teks Berjalan Layanan Digital
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Teks ini tampil di bagian atas menu Layanan Digital pada beranda. Gunakan kalimat singkat dan jelas. Jika perlu beberapa informasi, pisahkan dengan tanda "|".
+              </p>
+              <textarea
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                value={runningText || ''}
+                onChange={(e) => onUpdateRunningText(e.target.value)}
+                placeholder="Contoh: Selamat datang di GEMILANG ... | Informasi layanan terbaru ..."
+              />
+              <p className="mt-1 text-[11px] text-emerald-600">
+                Perubahan tersimpan otomatis dan langsung terlihat di beranda.
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const KonsultasiPage = () => {
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const nama = form.nama.value.trim();
+        const domisili = form.domisili.value.trim();
+        const topik = form.topik.value.trim();
+        const pertanyaan = form.pertanyaan.value.trim();
+
+        if (!nama || !pertanyaan || !domisili || domisili === 'Pilih Kecamatan...') {
+          alert('Mohon lengkapi nama, domisili, dan pertanyaan.');
+          return;
+        }
+
+        const pesan = `Konsultasi Syariah GEMILANG%0A%0ANama: ${encodeURIComponent(
+          nama
+        )}%0ADomisili: ${encodeURIComponent(domisili)}%0ATopik: ${encodeURIComponent(
+          topik
+        )}%0A%0APertanyaan:%0A${encodeURIComponent(pertanyaan)}`;
+
+        if (KONTAK_KONSULTASI_WHATSAPP) {
+          const url = `https://wa.me/${KONTAK_KONSULTASI_WHATSAPP}?text=${pesan}`;
+          window.open(url, '_blank');
+        } else {
+          alert(
+            'Berikut ringkasan pertanyaan Anda:\n\n' +
+              decodeURIComponent(pesan.replace(/%0A/g, '\n')) +
+              '\n\nCatatan: Admin belum mengisi nomor WhatsApp di konfigurasi aplikasi.'
+          );
+        }
+
+        form.reset();
+      };
+
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="bg-emerald-600 p-6 text-white">
+              <h2 className="text-2xl font-bold flex items-center">
+                <MessageCircle className="mr-3" /> Konsultasi Syariah
+              </h2>
+              <p className="text-emerald-100 mt-2">
+                Ajukan pertanyaan seputar hukum Islam, keluarga, atau kemasayarakatan.
+                Dijawab oleh Penyuluh Agama Islam Kompeten Kab. Banggai.
+              </p>
+            </div>
+            <div className="p-6">
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    name="nama"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="Contoh: Abdullah"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kecamatan Domisili
+                  </label>
+                  <select
+                    name="domisili"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  >
+                    <option>Pilih Kecamatan...</option>
+                    <option>Luwuk</option>
+                    <option>Luwuk Selatan</option>
+                    <option>Luwuk Utara</option>
+                    <option>Luwuk Timur</option>
+                    <option>Bunta</option>
+                    <option>Nambo</option>
+                    <option>Kintom</option>
+                    <option>Batui</option>
+                    <option>Batui Selatan</option>
+                    <option>Moilong</option>
+                    <option>Toili</option>
+                    <option>Toili Jaya</option>
+                    <option>Toili Barat</option>
+                    <option>Pagimana</option>
+                    <option>Simpang Raya</option>
+                    <option>Lobu</option>
+                    <option>Nuhon</option>
+                    <option>Masama</option>
+                    <option>Lamala</option>
+                    <option>Mantoh</option>
+                    <option>Balantak</option>
+                    <option>Balantak Selatan</option>
+                    <option>Balantak Utara</option>
+                    <option>Bualemo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Topik Konsultasi
+                  </label>
+                  <select
+                    name="topik"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  >
+                    <option>Pernikahan, Rujuk, Talak & Cerai (Munakahat)</option>
+                    <option>Bimbingan Keluarga Sakinah</option>
+                    <option>Waris (Faraid)</option>
+                    <option>Zakat, Infak & Sedekah</option>
+                    <option>Wakaf & Hibah</option>
+                    <option>Masjid, Mushalla & Kegiatan Keagamaan</option>
+                    <option>Penyuluhan Remaja & Pergaulan</option>
+                    <option>Muamalah (Utang Piutang, Jual Beli)</option>
+                    <option>Akidah & Ibadah Sehari-hari</option>
+                    <option>Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pertanyaan
+                  </label>
+                  <textarea
+                    name="pertanyaan"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 h-32 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="Tuliskan pertanyaan Anda secara detail..."
+                  ></textarea>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition shadow-lg transform active:scale-95"
+                >
+                  Kirim Konsultasi
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const Footer = () => (
+      <footer className="bg-gray-800 text-gray-300 py-8 mt-12">
+        <div className="container mx-auto px-4 grid md:grid-cols-3 gap-8">
+          <div>
+            <h4 className="text-white font-bold text-lg mb-4 flex items-center">
+              <Sparkles className="mr-2 text-emerald-400" /> GEMILANG App
+            </h4>
+            <p className="text-sm text-gray-400">
+              Gerbang Layanan & Informasi Agama Banggai.
+              <br />
+              Seksi Bimas Islam Kementerian Agama Kabupaten Banggai.
+              <br />
+              Mewujudkan masyarakat yang taat beragama, rukun, cerdas, dan
+              sejahtera.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-white font-bold mb-4">Kontak Kami</h4>
+            <p className="text-sm mb-2 text-gray-400">
+              Jl. Urip Sumoharjo No. XX, Luwuk
+            </p>
+            <p className="text-sm mb-2 text-gray-400">
+              Email: bimasislam@banggai.kemenag.go.id
+            </p>
+            <p className="text-sm text-gray-400">Telp: (0461) XXXXXX</p>
+          </div>
+          <div>
+            <h4 className="text-white font-bold mb-4">Tautan Cepat</h4>
+            <div className="flex flex-col space-y-2 text-sm text-gray-400">
+              <a
+                href="https://simkah.kemenag.go.id"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-emerald-400 transition"
+              >
+                Simkah Web
+              </a>
+              <a
+                href="https://siwak.kemenag.go.id"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-emerald-400 transition"
+              >
+                Siwak
+              </a>
+              <a
+                href="https://simas.kemenag.go.id"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-emerald-400 transition"
+              >
+                Simas Kemenag
+              </a>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-gray-700 mt-8 pt-6 text-center text-xs text-gray-500">
+          &copy; 2024 Seksi Bimas Islam Kemenag Kab. Banggai. All rights reserved.
+        </div>
+      </footer>
+    );
+
+    function App() {
+      const [page, setPage] = useState('home');
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      const DEFAULT_RUNNING_TEXT =
+        'Selamat datang di GEMILANG - Gerbang Layanan & Informasi Agama Banggai. | Informasi resmi layanan Bimas Islam, KUA, dan penyuluhan tersedia di aplikasi ini. | Untuk pembaruan data KUA dan layanan, silakan hubungi admin Seksi Bimas Islam Kemenag Kab. Banggai.';
+      const [runningText, setRunningText] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem('gemilang_running_text');
+          if (typeof saved === 'string' && saved.trim()) return saved;
+        } catch (e) {}
+        return DEFAULT_RUNNING_TEXT;
+      });
+      const [role, setRole] = useState(() => {
+        try {
+          const saved = window.localStorage.getItem('gemilang_role');
+          if (saved === 'admin' || saved === 'kua' || saved === 'umum') return saved;
+        } catch (e) {}
+        return 'umum';
+      });
+      const [showAdminLogin, setShowAdminLogin] = useState(false);
+      const [adminError, setAdminError] = useState('');
+
+      const ADMIN_USERNAME = 'admin';
+      const ADMIN_PASSWORD = 'admin123';
+
+      const updateRunningText = (nextText) => {
+        setRunningText(nextText);
+        try {
+          window.localStorage.setItem('gemilang_running_text', nextText);
+        } catch (e) {}
+      };
+
+      const updateRole = (nextRole) => {
+        setRole(nextRole);
+        try {
+          window.localStorage.setItem('gemilang_role', nextRole);
+        } catch (e) {}
+      };
+
+      useEffect(() => {
+        window.scrollTo(0, 0);
+      }, [page]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+          <Header
+            setPage={setPage}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
+            role={role}
+            onChangeRole={(r) => {
+              if (r === 'admin') {
+                setShowAdminLogin(true);
+                return;
+              }
+              updateRole(r);
+            }}
+            onRequestAdminLogin={() => {
+              setAdminError('');
+              setShowAdminLogin(true);
+            }}
+            onAdminLogout={() => {
+              updateRole('umum');
+            }}
+          />
+
+          {page === 'home' && (
+            <>
+              <HeroSection setPage={setPage} />
+              <StatsDashboard />
+              <FeaturesGrid setPage={setPage} runningText={runningText} />
+              <NewsFeed />
+            </>
+          )}
+
+          {page === 'data' && (
+            <DataKuaPage
+              role={role}
+              runningText={runningText}
+              onUpdateRunningText={updateRunningText}
+            />
+          )}
+
+          {page === 'konsultasi' && <KonsultasiPage />}
+
+          {page === 'layanan' && (
+            <div className="container mx-auto px-4 py-12 text-center">
+              <div className="bg-white p-8 rounded-xl shadow-lg max-w-3xl mx-auto">
+                <h2 className="text-2xl font-bold mb-4 text-emerald-800">
+                  Pusat Layanan Digital
+                </h2>
+                <p className="text-gray-600 mb-8">
+                  Halaman ini memuat tautan integrasi langsung ke aplikasi nasional
+                  (Simkah, Siwak, Simas) serta layanan lokal Bimas Islam Kabupaten
+                  Banggai.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() =>
+                      window.open('https://simkah.kemenag.go.id/info-nikah', '_blank')
+                    }
+                    className="p-4 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-emerald-700 font-semibold transition hover:scale-105"
+                  >
+                    Daftar Nikah Online (SIMKAH)
+                  </button>
+                  <button
+                    onClick={() =>
+                      window.open(
+                        'https://simas.kemenag.go.id/page/profilmasjid',
+                        '_blank'
+                      )
+                    }
+                    className="p-4 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-emerald-700 font-semibold transition hover:scale-105"
+                  >
+                    Cari Lokasi Masjid (SIMAS)
+                  </button>
+                  <a
+                    href="mailto:bimasislam@banggai.kemenag.go.id?subject=Permohonan%20Rekomendasi%20Petugas%20Khutbah&body=Assalamu%27alaikum%20warahmatullahi%20wabarakatuh.%0A%0ASaya%20mengajukan%20permohonan%20rekomendasi%20petugas%20khutbah%20dengan%20data%20sebagai%20berikut:%0A%0ANama%20Pemohon:%0ALembaga/Masjid:%0AAlamat%20Masjid:%0AHari/Tanggal%20Pelaksanaan:%0AWaktu:%0ATema%20yang%20Diusulkan%20(bila%20ada):%0A%0AMohon%20dibantu%20penugasan%20petugas%20khutbah%20sesuai%20ketentuan%20yang%20berlaku.%0A%0AWassalamu%27alaikum%20warahmatullahi%20wabarakatuh."
+                    className="p-4 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-emerald-700 font-semibold transition hover:scale-105 flex items-center justify-center"
+                  >
+                    Rekomendasi Petugas Khutbah
+                  </a>
+                  <a
+                    href="mailto:bimasislam@banggai.kemenag.go.id?subject=Laporan%20Kinerja%20Penyuluh%20Agama%20Islam&body=Assalamu%27alaikum%20warahmatullahi%20wabarakatuh.%0A%0ABerikut%20kami%20sampaikan%20laporan%20kinerja%20penyuluh:%0A%0ANama%20Penyuluh:%0ANIP/NIK%20(bila%20ada):%0AJenis%20Penyuluh:%20PNS%20/%20Non-PNS%0AKecamatan%20Binaan:%0APeriode%20Laporan%20(bulan/tahun):%0ARingkasan%20Kegiatan%20Utama:%0A1.%0A2.%0A3.%0A%0ALampiran%20detail%20kegiatan%20atau%20dokumen%20pendukung%20dapat%20dikirim%20melalui%20email%20balasan%20atau%20media%20lain%20sesuai%20arahan.%0A%0AWassalamu%27alaikum%20warahmatullahi%20wabarakatuh."
+                    className="p-4 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-emerald-700 font-semibold transition hover:scale-105 flex items-center justify-center"
+                  >
+                    Laporan Kinerja Penyuluh
+                  </a>
+                </div>
+                <button
+                  onClick={() => setPage('home')}
+                  className="mt-8 text-gray-500 hover:text-gray-800 underline"
+                >
+                  Kembali ke Beranda
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showAdminLogin && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Masuk Admin</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Mode admin hanya untuk pengelola Seksi Bimas Islam. Pengguna umum dan KUA tidak perlu masuk admin untuk memakai layanan.
+                </p>
+                <form
+                  className="space-y-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const username = e.target.username.value.trim();
+                    const pwd = e.target.password.value;
+                    if (username === ADMIN_USERNAME && pwd === ADMIN_PASSWORD) {
+                      updateRole('admin');
+                      setShowAdminLogin(false);
+                      setAdminError('');
+                      e.target.reset();
+                    } else {
+                      setAdminError('User atau password admin salah.');
+                    }
+                  }}
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      User Admin
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      placeholder="Masukkan user admin (mis. admin)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password Admin
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      placeholder="Masukkan password admin"
+                    />
+                  </div>
+                  {adminError && (
+                    <p className="text-xs text-red-600">{adminError}</p>
+                  )}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAdminLogin(false);
+                        setAdminError('');
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 rounded-lg text-sm bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+                    >
+                      Masuk
+                    </button>
+                  </div>
+                </form>
+                <p className="mt-3 text-[10px] text-gray-400">
+                  Catatan: Sistem ini belum menggunakan server autentikasi khusus, sehingga password admin sebaiknya hanya dibagikan kepada pengelola internal.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <Footer />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

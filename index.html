@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<!--
+  VERSI SIMANIS ONLINE (PWA) - FIXED MARQUEE
+  - Aplikasi: "SIMANIS Banggai - Sistem Manajemen Bimas Islam"
+  - Teknologi: React + Supabase + konfigurasi PWA
+  - Perbaikan: Teks berjalan (Marquee) memiliki fallback default agar selalu muncul.
+-->
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIMANIS Banggai</title>
+  <!-- Favicon (Menggunakan Emoji Masjid) & Manifest -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>">
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Supabase JS (ESM) -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    window.supabase = { createClient };
+    window.supabaseReady = true;
+  </script>
+  <style>
+    /* Animasi Teks Berjalan (Marquee) */
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .animate-marquee {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee 20s linear infinite; /* Kecepatan disesuaikan agar enak dibaca */
+      padding-left: 100%; /* Memastikan start dari luar layar kanan */
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+    /* Animasi Fade In */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <!-- Teks Loading Default -->
+  <div id="root" style="padding: 20px; font-family: sans-serif; text-align: center; color: #0f766e;">
+    <h2 class="animate-pulse">🕌 Sedang Memuat Aplikasi SIMANIS...</h2>
+    <p style="font-size: 12px; color: #666;">Jika tampilan ini tidak berubah, coba Refresh atau cek koneksi internet.</p>
+  </div>
+  
+  <!-- Registrasi Service Worker untuk PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./service-worker.js').catch(function (err) {
+          console.log('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+
+  <script>
+    function showError(title, msg) {
+      const root = document.getElementById('root');
+      if (root) {
+        root.innerHTML = '<div style="padding:20px; color:red; font-family:sans-serif; background:#fff0f0; border:1px solid red; margin:20px; border-radius:8px;"><h3>⚠️ ' + title + '</h3><p>' + msg + '</p><button onclick="window.location.reload(true)" style="padding:10px; margin-top:10px; cursor:pointer;">Refresh Halaman</button></div>';
+      }
+    }
+    window.addEventListener('error', function(e) {
+      showError('Terjadi Kesalahan Script', e.message + ' (Line: ' + e.lineno + ')');
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && e.reason.name === 'FetchError') return;
+      showError('Unhandled Promise Rejection', e.reason ? (e.reason.message || e.reason) : 'Unknown Error');
+    });
+  </script>
+
+  <script type="text/babel">
+    function waitForSupabase(cb) {
+      if (window.supabase && window.supabase.createClient) {
+        cb();
+      } else {
+        setTimeout(() => waitForSupabase(cb), 100);
+      }
+    }
+
+    waitForSupabase(() => {
+      const { useEffect, useMemo, useState, useRef } = React;
+
+      if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+        throw new Error("Library React gagal dimuat. Cek koneksi internet Anda.");
+      }
+
+    const defaultRKT = [
+      { id: 1, pilar: "Layanan KUA Prima", kegiatan: "Standardisasi Layanan KUA (Service Excellence)", target: "23 KUA", tw: "TW I", status: "Selesai", progress: 100 },
+      { id: 2, pilar: "Layanan KUA Prima", kegiatan: "Digitalisasi & Validasi Data SIMKAH", target: "100% Data", tw: "TW I-IV", status: "Proses", progress: 80 },
+      { id: 3, pilar: "Keluarga Sakinah", kegiatan: "Bimbingan Perkawinan (Bimwin) Catin", target: "50 Angkatan", tw: "TW I-IV", status: "Proses", progress: 45 },
+      { id: 4, pilar: "Penyuluhan Agama", kegiatan: "Majelis Taklim Berbadan Hukum", target: "100 MT", tw: "TW I-IV", status: "Proses", progress: 60 },
+      { id: 5, pilar: "Moderasi Beragama", kegiatan: "Kampung Moderasi Beragama (KMB)", target: "2 Desa Binaan", tw: "TW II", status: "Proses", progress: 50 },
+    ];
+
+    const defaultKUA = [
+      { id: 'k1', nama: "KUA Kec. Moilong", kepala: "H. Mohamad Zulkarnain, S.Ag, MA", status: "Prima", layanan: "Online" },
+      { id: 'k2', nama: "KUA Kec. Batui Selatan", kepala: "N.A Sustiono, S.HI", status: "Prima", layanan: "Online" },
+      { id: 'k3', nama: "KUA Kec. Luwuk Selatan", kepala: "H. Sapri Mariadjang, S.HI", status: "Prima", layanan: "Online" },
+      { id: 'k4', nama: "KUA Kec. Masama", kepala: "Ismail, S.HI", status: "Siaga", layanan: "Hybrid" },
+      { id: 'k5', nama: "KUA Kec. Simpang Raya", kepala: "Ahmad Zaenal Ihrom, S.Th.I", status: "Prima", layanan: "Online" }
+    ];
+
+    const Icons = {
+        LayoutDashboard: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+        Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+        FileText: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
+        Settings: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+        LogOut: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+        RefreshCw: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>,
+        Clock: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+        Edit2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+        Save: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    };
+    const { LayoutDashboard, Users, FileText, Settings, LogOut, RefreshCw, Clock, Edit2, Save } = Icons;
+
+    function safeJsonParse(v) {
+      try { return JSON.parse(v); } catch { return null; }
+    }
+
+    function getSupabaseConfig() {
+      const raw = localStorage.getItem('simanis_supabase');
+      const parsed = raw ? safeJsonParse(raw) : null;
+      const DEFAULT = {
+        url: 'https://vazyleskmkbisbenmgpj.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhenlsZXNrbWtiaXNiZW5tZ3BqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDM4MDcsImV4cCI6MjA4MjMxOTgwN30.IoOjBwBqN-ZufjBrvG7e_q0FZzZLSoBODWdJzwptOdY'
+      };
+      if (!parsed || !parsed.url || !parsed.anonKey) return DEFAULT;
+      return parsed;
+    }
+
+    function setSupabaseConfig(url, anonKey) {
+      localStorage.setItem('simanis_supabase', JSON.stringify({ url, anonKey }));
+    }
+
+    let supabase = null;
+    function createSupabaseClient(config) {
+      if (!config) return null;
+      if (!window.supabase) return null;
+      const { createClient } = window.supabase;
+      return createClient(config.url, config.anonKey);
+    }
+    if (!supabase) {
+      const config = getSupabaseConfig();
+      if (config && window.supabase) {
+        const { createClient } = window.supabase;
+        supabase = createClient(config.url, config.anonKey);
+      }
+    }
+
+    const PrayerWidget = () => {
+      const [prayerTimes, setPrayerTimes] = useState(null);
+      const [currentDate, setCurrentDate] = useState("");
+
+      useEffect(() => {
+        const fetchPrayer = async () => {
+          try {
+            const date = new Date();
+            const today = date.toISOString().split('T')[0];
+            const res = await fetch(`https://api.aladhan.com/v1/timings/${today.split('-').reverse().join('-')}?latitude=-0.9516&longitude=122.7886&method=20`);
+            const data = await res.json();
+            setPrayerTimes(data.data.timings);
+            setCurrentDate(data.data.date.readable);
+          } catch (error) {
+            console.error("Gagal ambil jadwal shalat", error);
+            setPrayerTimes({ Fajr: "04:30", Dhuhr: "11:55", Asr: "15:15", Maghrib: "18:00", Isha: "19:10" });
+          }
+        };
+        fetchPrayer();
+      }, []);
+
+      if (!prayerTimes) return <div className="animate-pulse bg-emerald-800/10 h-40 rounded-xl"></div>;
+
+      const prayers = [
+        { name: "Subuh", time: prayerTimes.Fajr, icon: "🌅" },
+        { name: "Dzuhur", time: prayerTimes.Dhuhr, icon: "☀️" },
+        { name: "Ashar", time: prayerTimes.Asr, icon: "🌤️" },
+        { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌇" },
+        { name: "Isya", time: prayerTimes.Isha, icon: "🌙" },
+      ];
+
+      return (
+        <div className="bg-emerald-900 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-between h-full min-h-[160px] group">
+          {/* Background Image dengan Efek Parallax/Zoom Halus */}
+          <div className="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=800&q=80" alt="" className="w-full h-full object-cover opacity-90 transition-transform duration-[3s] ease-in-out group-hover:scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/80 via-emerald-900/50 to-emerald-900/30"></div>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 blur-2xl z-0"></div>
+          <div className="flex justify-between items-start z-10 mb-4 relative">
+            <div>
+              <p className="text-emerald-300 text-xs font-medium uppercase tracking-wider mb-1">Jadwal Shalat • Luwuk</p>
+              <p className="text-xs text-emerald-100 opacity-80">{currentDate}</p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+              <Clock className="text-white" width={18} height={18} />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-between z-10 relative">
+            {prayers.map((p, idx) => (
+              <div key={idx} className="flex flex-col items-center justify-center bg-emerald-950/30 rounded-lg py-2 px-1 border border-emerald-500/20 backdrop-blur-sm flex-1 min-w-[55px]">
+                <span className="text-base mb-1">{p.icon}</span>
+                <span className="text-[10px] text-emerald-200 uppercase font-bold">{p.name}</span>
+                <span className="text-xs font-bold text-white">{p.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    // --- KOMPONEN MARQUEE YANG SUDAH DIPERBAIKI ---
+    const PublicMarquee = () => {
+      // Default text ditambahkan agar animasi selalu berjalan walaupun fetch gagal/belum setup
+      const defaultText = "Selamat Datang di Aplikasi SIMANIS Banggai - Sistem Manajemen Bimas Islam Terpadu. Akses Layanan KUA & Informasi Keagamaan dengan Mudah dan Cepat.";
+      const [text, setText] = useState(defaultText);
+      const [isLoaded, setIsLoaded] = useState(false);
+      
+      useEffect(() => {
+        if (window.supabase) {
+           const config = getSupabaseConfig();
+           if(config && config.url && config.anonKey) {
+              const client = window.supabase.createClient(config.url, config.anonKey);
+              client
+                .from('marquee_text')
+                .select('text')
+                .order('id', { ascending: true })
+                .limit(1)
+                .then(({ data, error }) => {
+                  if (data && data.length > 0) {
+                     // Ambil text dari DB apa adanya (termasuk jika kosong)
+                     setText(data[0].text || '');
+                     setIsLoaded(true);
+                  }
+                })
+                .catch(err => {
+                   console.log("Marquee fetch error, using default text");
+                });
+           }
+        }
+      }, []);
+
+      // Jika sudah berhasil load dari DB dan teksnya kosong, sembunyikan marquee
+      if (isLoaded && text === '') return null;
+
+      return (
+        <div className="overflow-hidden whitespace-nowrap bg-emerald-50 border border-emerald-100 rounded-lg py-2 px-4 mb-6 relative">
+          <div className="w-full overflow-hidden">
+             <div className="animate-marquee">
+                <span className="text-emerald-700 font-medium text-sm md:text-base">
+                  {text}
+                </span>
+             </div>
+          </div>
+        </div>
+      );
+    };
+
+    const Pill = ({ children, variant }) => {
+      const cls = variant === 'green'
+        ? 'bg-green-100 text-green-700'
+        : variant === 'blue'
+          ? 'bg-blue-100 text-blue-700'
+          : variant === 'amber'
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-slate-100 text-slate-600';
+      return <span className={`px-2 py-1 rounded-full text-xs font-bold ${cls}`}>{children}</span>;
+    };
+
+    const Layout = ({ children, activeTab, onTabChange, session, onLogout, onResetData, loading, dataError }) => (
+        <div className="min-h-screen">
+          <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 relative z-50">
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              
+              <div className="max-w-6xl mx-auto px-4 mb-4">
+                 {/* Marquee hanya dipanggil di sini satu kali */}
+                 <PublicMarquee />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-white font-bold text-xl">SIMANIS Banggai</h1>
+                  <p className="text-emerald-100 text-sm opacity-90">Sistem Manajemen Bimas Islam</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {session ? (
+                    <>
+                      <span className="text-xs text-emerald-100 bg-white/10 border border-white/10 px-3 py-1 rounded-full">
+                        {session.user.email}
+                      </span>
+                      <button onClick={onLogout} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10 text-sm">
+                        <LogOut width={16} height={16} /> Logout
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-emerald-100 bg-white/10 border border-white/10 px-3 py-1 rounded-full">
+                      Belum login
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-2 flex-wrap">
+                <button onClick={() => onTabChange('dashboard')} className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'dashboard' ? 'bg-white text-emerald-800 border-white' : 'bg-white/10 text-white border-white/10 hover:bg-white/15'}`}>
+                  <span className="inline-flex items-center gap-2"><LayoutDashboard width={16} height={16} /> Dashboard</span>
+                </button>
+                <button onClick={() => onTabChange('rkt')} className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'rkt' ? 'bg-white text-emerald-800 border-white' : 'bg-white/10 text-white border-white/10 hover:bg-white/15'}`}>
+                  <span className="inline-flex items-center gap-2"><FileText width={16} height={16} /> RKT</span>
+                </button>
+                <button onClick={() => onTabChange('kua')} className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'kua' ? 'bg-white text-emerald-800 border-white' : 'bg-white/10 text-white border-white/10 hover:bg-white/15'}`}>
+                  <span className="inline-flex items-center gap-2"><Users width={16} height={16} /> KUA</span>
+                </button>
+                <button onClick={() => onTabChange('settings')} className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'settings' ? 'bg-white text-emerald-800 border-white' : 'bg-white/10 text-white border-white/10 hover:bg-white/15'}`}>
+                  <span className="inline-flex items-center gap-2"><Settings width={16} height={16} /> Supabase</span>
+                </button>
+                {session ? (
+                  <button onClick={onResetData} className="px-4 py-2 rounded-lg text-sm font-medium border bg-white/10 text-white border-white/10 hover:bg-white/15 inline-flex items-center gap-2">
+                    <RefreshCw width={16} height={16} /> Reset Data
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            {loading ? (
+              <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">Memuat...</div>
+            ) : null}
+            {dataError ? (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{dataError}</div>
+            ) : null}
+            {children}
+          </div>
+        </div>
+      );
+
+    const SettingsView = ({
+      config,
+      loading,
+      authMode,
+      authError,
+      authSuccess,
+      emailRef,
+      passwordRef,
+      onChangeAuthMode,
+      onSubmitAuth,
+      onSaveConfig,
+      onClearConfig,
+      session
+    }) => {
+      const [url, setUrl] = useState(config?.url || '');
+      const [anonKey, setAnonKey] = useState(config?.anonKey || '');
+      const [marqueeText, setMarqueeText] = useState('');
+      const [marqueeMsg, setMarqueeMsg] = useState('');
+      const [marqueeId, setMarqueeId] = useState(1);
+      const loadedRef = useRef(false);
+
+      useEffect(() => {
+        setUrl(config?.url || '');
+        setAnonKey(config?.anonKey || '');
+      }, [config?.url, config?.anonKey]);
+
+      // Fetch marquee text saat login
+      useEffect(() => {
+        if (session && config && !loadedRef.current) {
+           const client = createSupabaseClient(config);
+           if(client) {
+               // Ambil ID dan Text yang benar agar update tepat sasaran
+               client.from('marquee_text').select('id, text').order('id', { ascending: true }).limit(1).maybeSingle()
+               .then(({ data }) => { 
+                 if(data) {
+                   setMarqueeText(data.text || '');
+                   setMarqueeId(data.id);
+                 }
+                 loadedRef.current = true;
+               });
+           }
+        }
+      }, [session, config]);
+
+      const handleSaveMarquee = async () => {
+          if(!config) return;
+          const client = createSupabaseClient(config);
+          if(!client) return;
+          setMarqueeMsg('Menyimpan...');
+          // Upsert data menggunakan ID yang benar (agar tidak duplikat)
+          const { error } = await client.from('marquee_text').upsert({ id: marqueeId, text: marqueeText });
+          if(error) setMarqueeMsg('Gagal: ' + error.message);
+          else {
+            setMarqueeMsg('Berhasil disimpan! Halaman akan dimuat ulang...');
+            setTimeout(() => window.location.reload(), 1000);
+          }
+      };
+
+      const handleResetMarqueeDB = async () => {
+          if(!config) return;
+          if(!confirm("Tombol ini akan MENGHAPUS & MERESET tabel teks berjalan di database. Gunakan jika fitur edit macet. Lanjutkan?")) return;
+          const client = createSupabaseClient(config);
+          setMarqueeMsg('Mereset database...');
+          await client.from('marquee_text').delete().neq('id', 0); // Hapus semua
+          await client.from('marquee_text').insert({ id: 1, text: 'Selamat Datang di SIMANIS Banggai.' }); // Isi default
+          window.location.reload();
+      };
+
+      return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+              <h2 className="font-bold text-slate-800">Konfigurasi Supabase</h2>
+              <p className="text-sm text-slate-500 mt-1">Isi URL & anon key dari menu Project Settings → API.</p>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">SUPABASE_URL</label>
+                  <input value={url} onChange={(e) => setUrl(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-emerald-500" placeholder="https://xxxx.supabase.co" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">SUPABASE_ANON_KEY</label>
+                  <textarea value={anonKey} onChange={(e) => setAnonKey(e.target.value)} rows={4} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-emerald-500" placeholder="eyJ..." />
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => onSaveConfig(url, anonKey)} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium">
+                    Simpan Konfigurasi
+                  </button>
+                  <button onClick={onClearConfig} className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+              {session ? (
+                <>
+                  <h2 className="font-bold text-slate-800 mb-4">Pengaturan Admin</h2>
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm mb-4">
+                    Login sebagai: <b>{session.user.email}</b>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-slate-700">Edit Teks Berjalan (Marquee)</label>
+                    <textarea value={marqueeText || ''} onChange={(e) => setMarqueeText(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-emerald-500" rows={4} placeholder="Masukkan teks pengumuman..." />
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500">{marqueeMsg}</span>
+                        <button onClick={handleSaveMarquee} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium">Simpan Teks</button>
+                    </div>
+                    <div className="text-right mt-2"><button onClick={handleResetMarqueeDB} className="text-xs text-red-400 hover:text-red-600 underline">Reset Database Teks (Jika Error)</button></div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-bold text-slate-800">Login / Register</h2>
+                  {!config ? (
+                <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
+                  Isi konfigurasi Supabase dulu.
+                </div>
+              ) : null}
+
+              <form onSubmit={onSubmitAuth} className="mt-4 space-y-3">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => onChangeAuthMode('login')} className={`px-3 py-2 rounded-lg text-sm font-medium border ${authMode === 'login' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'}`}>
+                    Login
+                  </button>
+                  <button type="button" onClick={() => onChangeAuthMode('register')} className={`px-3 py-2 rounded-lg text-sm font-medium border ${authMode === 'register' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200'}`}>
+                    Register
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input
+                    ref={emailRef}
+                    type="email"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-emerald-500"
+                    placeholder="nama@email.com"
+                    disabled={!config || loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                  <input
+                    ref={passwordRef}
+                    type="password"
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-emerald-500"
+                    placeholder="Minimal 6 karakter"
+                    disabled={!config || loading}
+                  />
+                </div>
+
+                {authError ? (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{authError}</div>
+                ) : null}
+
+                {authSuccess ? (
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{authSuccess}</div>
+                ) : null}
+
+                <button type="submit" className="w-full px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium disabled:opacity-50" disabled={!config || loading}>
+                  {authMode === 'login' ? 'Login' : 'Register'}
+                </button>
+              </form>
+                </>
+              )}
+            </div>
+          </div>
+        );
+    };
+
+    const SIMANISApp = () => {
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [config, setConfigState] = useState(() => getSupabaseConfig());
+      const supabase = useMemo(() => createSupabaseClient(config), [config]);
+      const [authMode, setAuthMode] = useState('login');
+      const [authError, setAuthError] = useState('');
+      const [authSuccess, setAuthSuccess] = useState('');
+      const emailRef = useRef(null);
+      const passwordRef = useRef(null);
+      const [session, setSession] = useState(null);
+      const userId = session?.user?.id ?? null;
+      const [loading, setLoading] = useState(false);
+      const [dataError, setDataError] = useState('');
+      const [rktData, setRktData] = useState([]);
+      const [kuaData, setKuaData] = useState([]);
+      const [editRktId, setEditRktId] = useState(null);
+      const [editKuaId, setEditKuaId] = useState(null);
+      const [searchKua, setSearchKua] = useState('');
+      const [searchRkt, setSearchRkt] = useState('');
+      const [filterPilar, setFilterPilar] = useState('all');
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [filterTw, setFilterTw] = useState('all');
+
+      useEffect(() => {
+        if (!supabase) return;
+        let unsub = null;
+        const init = async () => {
+          try {
+            const { data } = await supabase.auth.getSession();
+            setSession(data.session);
+            const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
+              setSession(s);
+            });
+            unsub = listener.subscription;
+          } catch (e) {
+            console.error("Auth init error:", e);
+          }
+        };
+        init();
+        return () => { if (unsub) unsub.unsubscribe(); };
+      }, [supabase]);
+
+      const seedIfEmpty = async () => {
+        if (!supabase || !userId) return;
+        const { data: rktExisting, error: rktErr } = await supabase.from('rkt_items').select('id').eq('user_id', userId).limit(1);
+        if (rktErr) throw rktErr;
+        const { data: kuaExisting, error: kuaErr } = await supabase.from('kua_items').select('id').eq('user_id', userId).limit(1);
+        if (kuaErr) throw kuaErr;
+
+        if (!rktExisting || rktExisting.length === 0) {
+          const payload = defaultRKT.map((x) => ({ user_id: userId, pilar: x.pilar, kegiatan: x.kegiatan, target: x.target, tw: x.tw, status: x.status, progress: Number(x.progress) || 0 }));
+          await supabase.from('rkt_items').insert(payload);
+        }
+        if (!kuaExisting || kuaExisting.length === 0) {
+          const payload = defaultKUA.map((x) => ({ user_id: userId, nama: x.nama, kepala: x.kepala, status: x.status, layanan: x.layanan }));
+          await supabase.from('kua_items').insert(payload);
+        }
+      };
+
+      const loadData = async () => {
+        if (!supabase || !userId) return;
+        setLoading(true);
+        setDataError('');
+        try {
+          await seedIfEmpty();
+          const [{ data: rkt, error: rktErr }, { data: kua, error: kuaErr }] = await Promise.all([
+            supabase.from('rkt_items').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+            supabase.from('kua_items').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+          ]);
+          if (rktErr) throw rktErr;
+          if (kuaErr) throw kuaErr;
+          setRktData(rkt || []);
+          setKuaData(kua || []);
+        } catch (e) {
+          setDataError(e?.message || String(e));
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (!userId) {
+          setRktData([]);
+          setKuaData([]);
+          return;
+        }
+        loadData();
+      }, [userId]);
+
+      const handleSaveConfig = (url, anonKey) => {
+        const u = (url || '').trim();
+        const k = (anonKey || '').trim();
+        if (!u || !k) {
+          alert('SUPABASE_URL dan SUPABASE_ANON_KEY wajib diisi.');
+          return;
+        }
+        setSupabaseConfig(u, k);
+        setConfigState({ url: u, anonKey: k });
+      };
+
+      const handleClearConfig = () => {
+        localStorage.removeItem('simanis_supabase');
+        setConfigState(null);
+      };
+
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        if (!window.supabase || !supabase) {
+          setAuthError("Gagal terhubung ke sistem database.");
+          return;
+        }
+        setAuthError('');
+        setAuthSuccess('');
+        const email = (emailRef.current?.value || '').trim();
+        const password = passwordRef.current?.value || '';
+        if (!email || !password) {
+          setAuthError('Email dan password wajib diisi.');
+          return;
+        }
+
+        try {
+          setLoading(true);
+          if (authMode === 'login') {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            if (data?.session) {
+              setAuthSuccess('Login berhasil.');
+            }
+          } else {
+            const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+            if (error) throw error;
+            setAuthSuccess('Registrasi berhasil. Cek email jika perlu verifikasi.');
+            setAuthMode('login');
+          }
+          if (passwordRef.current) passwordRef.current.value = '';
+        } catch (e2) {
+          setAuthError(e2?.message || String(e2));
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleLogout = async () => {
+        if (!supabase) return;
+        await supabase.auth.signOut();
+      };
+
+      const updateRktLocal = (id, field, value) => setRktData((prev) => prev.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+      const updateKuaLocal = (id, field, value) => setKuaData((prev) => prev.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+
+      const persistRktRow = async (row) => {
+        if (!supabase) return;
+        const payload = { ...row, updated_at: new Date().toISOString() };
+        delete payload.id; delete payload.created_at; delete payload.user_id; // prevent update system fields
+        const { error } = await supabase.from('rkt_items').update(payload).eq('id', row.id).eq('user_id', userId);
+        if (error) throw error;
+      };
+
+      const persistKuaRow = async (row) => {
+        if (!supabase) return;
+        const payload = { ...row, updated_at: new Date().toISOString() };
+        delete payload.id; delete payload.created_at; delete payload.user_id;
+        const { error } = await supabase.from('kua_items').update(payload).eq('id', row.id).eq('user_id', userId);
+        if (error) throw error;
+      };
+
+      const handleAddKua = async () => {
+        if (!supabase || !userId) return;
+        setLoading(true);
+        try {
+          const { data, error } = await supabase.from('kua_items').insert({ user_id: userId, nama: 'KUA Baru', kepala: '', status: 'Manual', layanan: 'Manual' }).select('*').single();
+          if (error) throw error;
+          setKuaData((prev) => [...prev, data]);
+          setEditKuaId(data.id);
+        } catch (e) {
+          setDataError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleResetData = async () => {
+        if (!supabase || !userId) return;
+        if (!confirm('Yakin reset data?')) return;
+        setLoading(true);
+        try {
+          await supabase.from('rkt_items').delete().eq('user_id', userId);
+          await supabase.from('kua_items').delete().eq('user_id', userId);
+          await seedIfEmpty();
+          await loadData();
+          alert('Reset berhasil.');
+        } catch (e) {
+          setDataError(e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const stats = useMemo(() => ({ totalRkt: rktData.length, onlineKua: kuaData.filter((k) => (k.layanan || '').toLowerCase() === 'online').length }), [rktData, kuaData]);
+      const pilarOptions = useMemo(() => Array.from(new Set(rktData.map(x => x.pilar))), [rktData]);
+      const filteredRkt = useMemo(() => {
+        const q = searchRkt.trim().toLowerCase();
+        return rktData.filter((item) => {
+          if (filterPilar !== 'all' && item.pilar !== filterPilar) return false;
+          if (filterStatus !== 'all' && (item.status || 'Belum') !== filterStatus) return false;
+          if (filterTw !== 'all' && !(item.tw || '').toLowerCase().includes(filterTw.toLowerCase())) return false;
+          if (!q) return true;
+          return (item.kegiatan + item.target + item.pilar).toLowerCase().includes(q);
+        });
+      }, [rktData, searchRkt, filterPilar, filterStatus, filterTw]);
+
+      const filteredKua = useMemo(() => {
+        const q = searchKua.trim().toLowerCase();
+        if (!q) return kuaData;
+        return kuaData.filter((k) => (k.nama + k.kepala + k.status + k.layanan).toLowerCase().includes(q));
+      }, [kuaData, searchKua]);
+
+      const DashboardView = () => (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <PrayerWidget />
+            <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div><p className="text-slate-500 text-sm">Program Unggulan</p><h3 className="text-2xl font-bold text-slate-800">{stats.totalRkt}</h3></div>
+                <div className="bg-emerald-100 p-3 rounded-lg text-emerald-600"><FileText width={20} height={20} /></div>
+              </div>
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div><p className="text-slate-500 text-sm">KUA Online</p><h3 className="text-2xl font-bold text-slate-800">{stats.onlineKua}</h3></div>
+                <div className="bg-blue-100 p-3 rounded-lg text-blue-600"><Users width={20} height={20} /></div>
+              </div>
+              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div><p className="text-slate-500 text-sm">Peristiwa Nikah</p><h3 className="text-2xl font-bold text-slate-800">1,450+</h3></div>
+                <div className="bg-amber-100 p-3 rounded-lg text-amber-700"><LayoutDashboard width={20} height={20} /></div>
+              </div>
+              <div className="sm:col-span-3 bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3"><div className="bg-emerald-50 p-2 rounded-full"><Settings className="text-emerald-600" width={18} height={18} /></div><span className="font-bold text-slate-700 text-sm">Status: {config ? 'Terpasang' : 'Belum'}, {session ? 'Login' : 'Guest'}</span></div>
+                {session && <button onClick={loadData} className="px-3 py-2 rounded-lg text-xs font-medium border bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200">Refresh Data</button>}
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-slate-800">Progres Program Prioritas</h3><button onClick={() => setActiveTab('rkt')} className="text-xs text-emerald-600 font-medium hover:underline">Lihat Semua</button></div>
+            <div className="space-y-5">{(rktData || []).slice(0, 6).map((item) => (
+              <div key={item.id}><div className="flex justify-between text-sm mb-1"><span className="font-medium text-slate-700">{item.kegiatan}</span><span className="font-bold text-emerald-600">{Number(item.progress) || 0}%</span></div><div className="w-full bg-slate-100 rounded-full h-2"><div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Number(item.progress) || 0}%` }}></div></div></div>
+            ))}</div>
+          </div>
+        </div>
+      );
+
+      const RKTView = () => (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div><h2 className="font-bold text-lg text-slate-800">Manajemen RKT (Online)</h2><p className="text-sm text-slate-500">Gunakan filter di bawah untuk menyaring program RKT.</p></div>
+            {session && <button onClick={loadData} className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">Refresh</button>}
+          </div>
+          {!session ? <div className="p-6"><div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm">Login diperlukan.</div></div> : (
+            <div className="p-4 pt-3">
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input type="text" value={searchRkt} onChange={(e) => setSearchRkt(e.target.value)} placeholder="Cari..." className="border rounded-lg px-3 py-2 text-sm" />
+                <select value={filterPilar} onChange={(e) => setFilterPilar(e.target.value)} className="border rounded-lg px-3 py-2 text-sm"><option value="all">Semua Pilar</option>{pilarOptions.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border rounded-lg px-3 py-2 text-sm"><option value="all">Semua Status</option><option value="Belum">Belum</option><option value="Proses">Proses</option><option value="Selesai">Selesai</option></select>
+                <select value={filterTw} onChange={(e) => setFilterTw(e.target.value)} className="border rounded-lg px-3 py-2 text-sm"><option value="all">Semua TW</option><option value="tw i">TW I</option><option value="tw ii">TW II</option><option value="tw iii">TW III</option><option value="tw iv">TW IV</option></select>
+              </div>
+              <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-medium"><tr><th className="px-6 py-4">Kegiatan</th><th className="px-6 py-4">Target</th><th className="px-6 py-4">Status</th><th className="px-6 py-4">Progres</th><th className="px-6 py-4">Aksi</th></tr></thead><tbody className="divide-y divide-slate-100">
+                {filteredRkt.map((item) => (
+                  <tr key={item.id} className={editRktId === item.id ? "bg-amber-50" : "hover:bg-slate-50"}>
+                    <td className="px-6 py-4"><span className="text-xs font-bold text-emerald-600 block mb-1">{item.pilar}</span><span className="text-slate-800 font-medium">{item.kegiatan}</span></td>
+                    <td className="px-6 py-4 text-slate-600">{item.target}</td>
+                    <td className="px-6 py-4">{editRktId === item.id ? <select className="border rounded p-1 text-xs" value={item.status || ''} onChange={(e) => updateRktLocal(item.id, 'status', e.target.value)}><option value="Belum">Belum</option><option value="Proses">Proses</option><option value="Selesai">Selesai</option></select> : <Pill variant={item.status === 'Selesai' ? 'green' : item.status === 'Proses' ? 'blue' : 'slate'}>{item.status}</Pill>}</td>
+                    <td className="px-6 py-4 w-56">{editRktId === item.id ? <div className="flex gap-2 items-center"><input type="range" className="w-32" min={0} max={100} value={Number(item.progress) || 0} onChange={(e) => updateRktLocal(item.id, 'progress', Number(e.target.value))} /><span className="text-xs font-bold">{Number(item.progress)}%</span></div> : <div className="w-full bg-slate-200 rounded-full h-2"><div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Number(item.progress)}%` }}></div></div>}</td>
+                    <td className="px-6 py-4"><button onClick={async () => { if (editRktId === item.id) { await persistRktRow(item); setEditRktId(null); } else { setEditRktId(item.id); } }} className="p-2 rounded hover:bg-slate-100 text-slate-500 hover:text-emerald-600">{editRktId === item.id ? <Save width={16} height={16} /> : <Edit2 width={16} height={16} />}</button></td>
+                  </tr>
+                ))}
+              </tbody></table></div>
+            </div>
+          )}
+        </div>
+      );
+
+      const KUAView = () => {
+        const handleDeleteKua = async (kua) => { if (confirm(`Hapus ${kua.nama}?`)) { setLoading(true); await supabase.from('kua_items').delete().eq('id', kua.id); await loadData(); setLoading(false); } };
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in">
+            <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <div><h2 className="font-bold text-lg text-slate-800">Database KUA Kecamatan</h2><p className="text-sm text-slate-500">Data tersimpan per-user.</p></div>
+              <div className="flex gap-2 w-full md:w-auto"><input value={searchKua} onChange={(e) => setSearchKua(e.target.value)} placeholder="Cari KUA..." className="w-full md:w-72 border rounded-lg px-3 py-2 text-sm" />{session && <><button onClick={loadData} className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium">Refresh</button><button onClick={handleAddKua} className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium">Tambah</button></>}</div>
+            </div>
+            {!session ? <div className="p-6"><div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm">Login diperlukan.</div></div> : (
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredKua.map((kua) => (
+                  <div key={kua.id} className={`rounded-xl border shadow-sm p-5 ${editKuaId === kua.id ? 'bg-amber-50' : 'bg-white'}`}>
+                    <div className="flex justify-between gap-3">
+                      <div className="w-full">{editKuaId === kua.id ? <input value={kua.nama} onChange={(e) => updateKuaLocal(kua.id, 'nama', e.target.value)} className="w-full border rounded px-2 py-1 mb-2" /> : <h3 className="font-bold text-slate-800 truncate">{kua.nama}</h3>}
+                      <div className="text-sm text-slate-600">{editKuaId === kua.id ? <input value={kua.kepala} onChange={(e) => updateKuaLocal(kua.id, 'kepala', e.target.value)} className="w-full border rounded px-2 py-1" /> : kua.kepala}</div></div>
+                      <div className="flex flex-col gap-2"><button onClick={async () => { if (editKuaId === kua.id) { await persistKuaRow(kua); setEditKuaId(null); } else { setEditKuaId(kua.id); } }} className="p-2 rounded hover:bg-slate-100 text-slate-500">{editKuaId === kua.id ? <Save width={16} /> : <Edit2 width={16} />}</button><button onClick={() => handleDeleteKua(kua)} className="p-2 rounded hover:bg-red-50 text-red-500"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>
+                    </div>
+                    <div className="mt-4 flex gap-2">{editKuaId === kua.id ? <><select value={kua.status} onChange={(e) => updateKuaLocal(kua.id, 'status', e.target.value)} className="border rounded text-xs"><option value="Prima">Prima</option><option value="Siaga">Siaga</option><option value="Perlu Perhatian">Perlu Perhatian</option></select></> : <Pill variant={kua.status === 'Prima' ? 'green' : 'slate'}>{kua.status}</Pill>}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const PublicHero = () => (
+        <div className="bg-emerald-700 text-white py-12 px-4 text-center rounded-b-3xl shadow-lg">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">SIMANIS Banggai</h1>
+          <p className="text-lg md:text-xl mb-4">Gerbang Layanan & Informasi Bimas Islam</p>
+          <div className="max-w-xl mx-auto text-emerald-100 text-sm">Akses data KUA, layanan digital, berita, dan konsultasi online dalam satu aplikasi.</div>
+        </div>
+      );
+
+      const PublicStats = () => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-8">
+          <div className="bg-pink-100 text-pink-700 rounded-xl p-4 text-center font-bold">1.450+<div className="text-xs font-normal text-pink-600 mt-1">Peristiwa Nikah</div></div>
+          <div className="bg-emerald-100 text-emerald-700 rounded-xl p-4 text-center font-bold">523<div className="text-xs font-normal text-emerald-600 mt-1">Masjid</div></div>
+          <div className="bg-blue-100 text-blue-700 rounded-xl p-4 text-center font-bold">89<div className="text-xs font-normal text-blue-600 mt-1">Penyuluh</div></div>
+          <div className="bg-amber-100 text-amber-700 rounded-xl p-4 text-center font-bold">24<div className="text-xs font-normal text-amber-600 mt-1">KUA</div></div>
+        </div>
+      );
+
+      const PublicLayanan = () => (
+        <div className="my-8">
+          <h2 className="text-xl font-bold mb-4 text-emerald-800">Layanan Digital</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="#" className="bg-white border border-emerald-100 rounded-xl p-4 shadow hover:shadow-md transition"><div className="font-bold text-emerald-700 mb-1">SIMKAH</div><div className="text-xs text-slate-500">Sistem Informasi Manajemen Nikah</div></a>
+            <a href="#" className="bg-white border border-emerald-100 rounded-xl p-4 shadow hover:shadow-md transition"><div className="font-bold text-emerald-700 mb-1">SIMAS</div><div className="text-xs text-slate-500">Data Masjid & Musholla</div></a>
+            <a href="#" className="bg-white border border-emerald-100 rounded-xl p-4 shadow hover:shadow-md transition"><div className="font-bold text-emerald-700 mb-1">Jadwal Shalat</div><div className="text-xs text-slate-500">Kab. Banggai</div></a>
+          </div>
+        </div>
+      );
+
+      const [kuaPublik, setKuaPublik] = useState([]);
+      useEffect(() => {
+        if (!session && supabase) {
+          supabase.from('kua_public').select('*').order('nama', { ascending: true })
+            .then(({ data }) => setKuaPublik(data || []))
+            .catch(() => setKuaPublik([]));
+        }
+      }, [session]);
+
+      const PublicKua = () => (
+        <div className="my-8">
+          <h2 className="text-xl font-bold mb-4 text-emerald-800">Data KUA Kecamatan</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {kuaPublik.length === 0 ? <div className="col-span-3 text-slate-500 text-sm">Data KUA belum tersedia.</div> : kuaPublik.map((k) => (
+              <div key={k.id || k.nama} className="rounded-xl border border-slate-100 bg-white shadow-sm p-4">
+                <div className="font-bold text-emerald-700">{k.nama}</div>
+                <div className="text-xs text-slate-500 mb-1">{k.alamat}</div>
+                <div className="text-sm mb-1">Kepala: <span className="font-medium">{k.kepala}</span></div>
+                <div className="flex gap-2 flex-wrap mt-2"><span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">{k.status}</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      const PublicView = () => (
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <PublicHero />
+          {/* PublicMarquee dihapus dari sini karena sudah ada di Layout */}
+          <PublicStats />
+          <PublicLayanan />
+          <PublicKua />
+          <div className="mt-12 pt-6 border-t border-slate-100 text-center pb-8"><p className="text-xs text-slate-400 mb-2">Versi 1.1.0 Fixed Marquee</p></div>
+        </div>
+      );
+
+      let view;
+      if (activeTab === 'settings') view = <SettingsView config={config} loading={loading} authMode={authMode} authError={authError} authSuccess={authSuccess} emailRef={emailRef} passwordRef={passwordRef} onChangeAuthMode={setAuthMode} onSubmitAuth={handleAuth} onSaveConfig={handleSaveConfig} onClearConfig={handleClearConfig} session={session} />;
+      else if (activeTab === 'rkt') view = <RKTView />;
+      else if (activeTab === 'kua') view = <KUAView />;
+      else view = !session ? <PublicView /> : <DashboardView />;
+
+      return <Layout activeTab={activeTab} onTabChange={setActiveTab} session={session} onLogout={handleLogout} onResetData={handleResetData} loading={loading} dataError={dataError}>{view}</Layout>;
+    };
+
+    const rootEl = document.getElementById('root');
+    if (rootEl) ReactDOM.createRoot(rootEl).render(<SIMANISApp />);
+  });
+  </script>
+</body>
+</html>
